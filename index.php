@@ -49,7 +49,7 @@ foreach($accounts as $a) {
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f8f9fa; }
         .sidebar { background-color: #212529; min-height: 100vh; color: white; }
-        .sidebar .nav-link { color: #rgba(255,255,255,.75); font-weight: 500; padding: 12px 20px; border-radius: 8px; margin: 5px 10px; }
+        .sidebar .nav-link { color: rgba(255,255,255,.75); font-weight: 500; padding: 12px 20px; border-radius: 8px; margin: 5px 10px; display: block; text-decoration: none; }
         .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #343a40; color: #fff; }
         .main-content { padding: 30px; }
         .card { border: none; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
@@ -68,10 +68,10 @@ foreach($accounts as $a) {
                 <small class="text-muted">نظام Micro-ERP ذكي</small>
             </div>
             <ul class="nav flex-column mt-4">
-                <li class="nav-item"><a class="nav-link active" href="#"><i class="fa-solid fa-chart-pie m-2"></i>الرئيسية</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><i class="fa-solid fa-list-check m-2"></i>دليل الحسابات</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><i class="fa-solid fa-file-invoice-dollar m-2"></i>القيود اليومية</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><i class="fa-solid fa-receipt m-2"></i>تقارير الأستاذ العام</a></li>
+                <li class="nav-item"><a class="nav-link active" href="index.php"><i class="fa-solid fa-chart-pie m-2"></i>الرئيسية</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php"><i class="fa-solid fa-list-check m-2"></i>دليل الحسابات</a></li>
+                <li class="nav-item"><a class="nav-link" href="add_voucher.php"><i class="fa-solid fa-file-invoice-dollar m-2"></i>القيود اليومية</a></li>
+                <li class="nav-item"><a class="nav-link" href="ledger_report.php"><i class="fa-solid fa-receipt m-2"></i>تقارير الأستاذ العام</a></li>
             </ul>
         </div>
 
