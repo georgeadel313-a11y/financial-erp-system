@@ -1,8 +1,6 @@
 <?php
-// 1. استدعاء ملف الاتصال بقاعدة البيانات
 require_once 'db.php';
 
-// 2. معالجة البيانات القادمة من الفورم عند الضغط على زر الحفظ (POST Request)
 $message = "";
 $messageType = "";
 
@@ -11,36 +9,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_account'])) {
     $account_name = trim($_POST['account_name']);
     $account_type = trim($_POST['account_type']);
 
-    // التأكد من أن الحقول ليست فارغة
     if (!empty($account_code) && !empty($account_name) && !empty($account_type)) {
         try {
-            // كود إدخال البيانات في جدول accounts بقاعدة البيانات
             $sql = "INSERT INTO accounts (account_code, account_name, account_type) VALUES (:code, :name, :type)";
             $stmt = $conn->prepare($sql);
-            $stmt->execute([
-                ':code' => $account_code,
-                ':name' => $account_name,
-                ':type' => $account_type
-            ]);
-            $message = "تم إضافة الحساب بنجاح إلى دليل الحسابات! ✨";
+            $stmt->execute([':code' => $account_code, ':name' => $account_name, ':type' => $account_type]);
+            $message = "تم إضافة الحساب بنجاح! ✨";
             $messageType = "success";
         } catch(PDOException $e) {
-            $message = "خطأ: تعذر إضافة الحساب. قد يكون الكود مكرراً. " . $e->getMessage();
-            $messageType = "error";
+            $message = "خطأ: كود الحساب مكرر أو مفقود.";
+            $messageType = "danger";
         }
-    } else {
-        $message = "يرجى ملء جميع الحقول المطلوبة!";
-        $messageType = "error";
     }
 }
 
-// 3. جلب الحسابات المحدثة من الجدول لعرضها
-try {
-    $stmt = $conn->prepare("SELECT * FROM accounts ORDER BY account_code ASC");
-    $stmt->execute();
-    $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch(PDOException $e) {
-    die("خطأ في جلب البيانات: " . $e->getMessage());
+// جلب البيانات والأعداد للإحصائيات
+$accounts = $conn->query("SELECT * FROM accounts ORDER BY account_code ASC")->fetchAll(PDO::FETCH_ASSOC);
+$total_accounts = count($accounts);
+
+// حساب إحصائيات سريعة تقريبية للـ Cards
+$asol_count = 0; $masrof_count = 0;
+foreach($accounts as $a) {
+    if($a['account_type'] == 'أصول') $asol_count++;
+    if($a['account_type'] == 'مصروفات') $masrof_count++;
 }
 ?>
 
@@ -49,187 +40,160 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>دليل الحسابات التفاعلي | نظام ERP المالي</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>لوحة التحكم المالية | ERP System</title>
     
-    <style>
-        body { 
-            font-family: 'Cairo', sans-serif; 
-            background-color: #f4f6f9; 
-            margin: 0; 
-            padding: 20px; 
-            color: #333;
-        }
-        .container { 
-            max-width: 900px; 
-            margin: 20px auto; 
-        }
-        .card {
-            background: white; 
-            padding: 25px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
-        }
-        h1, h2 { 
-            color: #2c3e50; 
-            margin-top: 0;
-            font-weight: 700;
-        }
-        h1 { text-align: center; font-size: 28px; margin-bottom: 30px; }
-        h2 { font-size: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-        
-        /* تنسيق الفورم */
-        .form-group-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-        label {
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #555;
-            font-size: 14px;
-        }
-        input, select {
-            font-family: 'Cairo', sans-serif;
-            padding: 10px 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        input:focus, select:focus {
-            border-color: #3498db;
-        }
-        .btn {
-            font-family: 'Cairo', sans-serif;
-            background-color: #2ecc71;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
-        }
-        .btn:hover { background-color: #27ae60; }
-        
-        /* التنبيهات */
-        .alert {
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-weight: 600;
-            text-align: center;
-        }
-        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-        /* تنسيق الجدول */
-        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 14px 18px; border-bottom: 1px solid #eee; text-align: right; }
-        th { background-color: #34495e; color: white; font-weight: 600; }
-        tr:last-child td { border-bottom: none; }
-        tr:nth-child(even) { background-color: #fcfcfc; }
-        tr:hover { background-color: #f8f9fa; }
-        
-        .badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .badge-asol { background-color: #e3f2fd; color: #0d47a1; }
-        .badge-masrof { background-color: #ffebee; color: #b71c1c; }
-        .badge-khasm { background-color: #fff3e0; color: #e65100; }
-        .badge-erad { background-color: #e8f5e9; color: #1b5e20; }
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f8f9fa; }
+        .sidebar { background-color: #212529; min-height: 100vh; color: white; }
+        .sidebar .nav-link { color: #rgba(255,255,255,.75); font-weight: 500; padding: 12px 20px; border-radius: 8px; margin: 5px 10px; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #343a40; color: #fff; }
+        .main-content { padding: 30px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .table-responsive { background: white; border-radius: 12px; padding: 15px; }
+        .stat-card { transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-5px); }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>💼 لوحة الحسابات الذكية | Micro-ERP</h1>
-        
-        <?php if (!empty($message)): ?>
-            <div class="alert alert-<?php echo $messageType; ?>">
-                <?php echo $message; ?>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-3 col-lg-2 sidebar d-none d-md-block p-0 shadow">
+            <div class="p-4 text-center border-bottom border-secondary">
+                <h5 class="fw-bold mb-0 text-info"><i class="fa-solid fa-wallet me-2"></i>إتقان المالي</h5>
+                <small class="text-muted">نظام Micro-ERP ذكي</small>
             </div>
-        <?php endif; ?>
+            <ul class="nav flex-column mt-4">
+                <li class="nav-item"><a class="nav-link active" href="#"><i class="fa-solid fa-chart-pie m-2"></i>الرئيسية</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="fa-solid fa-list-check m-2"></i>دليل الحسابات</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="fa-solid fa-file-invoice-dollar m-2"></i>القيود اليومية</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="fa-solid fa-receipt m-2"></i>تقارير الأستاذ العام</a></li>
+            </ul>
+        </div>
 
-        <div class="card">
-            <h2>➕ إضافة حساب جديد للدليل</h2>
-            <form action="index.php" method="POST">
-                <div class="form-group-container">
-                    <div class="form-group">
-                        <label for="account_code">كود الحساب (رقمي)</label>
-                        <input type="text" id="account_code" name="account_code" placeholder="مثال: 1102" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="account_name">اسم الحساب</label>
-                        <input type="text" id="account_name" name="account_name" placeholder="مثال: بنك مصر الجاري" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="account_type">نوع الحساب</label>
-                        <select id="account_type" name="account_type" required>
-                            <option value="">-- اختر النوع --</option>
-                            <option value="أصول">أصول</option>
-                            <option value="خصوم">خصوم</option>
-                            <option value="إيرادات">إيرادات</option>
-                            <option value="مصروفات">مصروفات</option>
-                        </select>
+        <div class="col-md-9 col-lg-10 main-content">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">لوحة إدارة الحسابات المالية</h2>
+                    <p class="text-muted">مرحباً بك مجدداً، نظرة عامة على النظام اليوم.</p>
+                </div>
+                <div class="text-muted fw-bold bg-white p-2 border rounded shadow-sm">
+                    <i class="fa-regular fa-calendar-days text-primary m-1"></i> <?php echo date('Y-m-d'); ?>
+                </div>
+            </div>
+
+            <?php if (!empty($message)): ?>
+                <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+                    <i class="fa-solid fa-circle-check me-2"></i> <?php echo $message; ?>
+                    <button type="submit" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card stat-card bg-white p-3 border-start border-primary border-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">إجمالي الحسابات بالدليل</h6>
+                                <h3 class="fw-bold mb-0"><?php echo $total_accounts; ?></h3>
+                            </div>
+                            <div class="bg-light-primary text-primary p-3 rounded-circle"><i class="fa-solid fa-folder-tree fa-2x"></i></div>
+                        </div>
                     </div>
                 </div>
-                <button type="submit" name="add_account" class="btn">حفظ الحساب في النظام 💾</button>
-            </form>
-        </div>
+                <div class="col-md-4">
+                    <div class="card stat-card bg-white p-3 border-start border-success border-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">حسابات الأصول</h6>
+                                <h3 class="fw-bold mb-0 text-success"><?php echo $asol_count; ?></h3>
+                            </div>
+                            <div class="text-success p-3 rounded-circle"><i class="fa-solid fa-vault fa-2x"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card bg-white p-3 border-start border-danger border-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">حسابات المصروفات</h6>
+                                <h3 class="fw-bold mb-0 text-danger"><?php echo $masrof_count; ?></h3>
+                            </div>
+                            <div class="text-danger p-3 rounded-circle"><i class="fa-solid fa-money-bill-transfer fa-2x"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <div class="card">
-            <h2>📊 دليل الحسابات الحالي (Chart of Accounts)</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>كود الحساب</th>
-                        <th>اسم الحساب</th>
-                        <th>نوع الحساب</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (count($accounts) > 0): ?>
-                        <?php foreach ($accounts as $account): 
-                            // لتلوين نوع الحساب بشكل جمالي حسب نوعه
-                            $badgeClass = "badge-asol";
-                            if($account['account_type'] == 'مصروفات') $badgeClass = "badge-masrof";
-                            if($account['account_type'] == 'خصوم') $badgeClass = "badge-khasm";
-                            if($account['account_type'] == 'إيرادات') $badgeClass = "badge-erad";
-                        ?>
-                            <tr>
-                                <td style="font-weight: 600; color: #7f8c8d;"><?php echo htmlspecialchars($account['account_code']); ?></td>
-                                <td style="font-weight: 600;"><?php echo htmlspecialchars($account['account_name']); ?></td>
-                                <td><span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($account['account_type']); ?></span></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="3" style="text-align: center; color: #7f8c8d;">لا توجد حسابات مضافة حتى الآن.</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card p-4 shadow-sm h-100">
+                        <h5 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-plus-circle me-1"></i> فتح حساب جديد</h5>
+                        <form action="index.php" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">كود الحساب</label>
+                                <input type="text" name="account_code" class="form-control" placeholder="مثال: 1103" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">اسم الحساب</label>
+                                <input type="text" name="account_name" class="form-control" placeholder="مثال: المبيعات" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">نوع الحساب</label>
+                                <select name="account_type" class="form-select" required>
+                                    <option value="">اختر النوع...</option>
+                                    <option value="أصول">أصول</option>
+                                    <option value="خصوم">خصوم</option>
+                                    <option value="إيرادات">إيرادات</option>
+                                    <option value="مصروفات">مصروفات</option>
+                                </select>
+                            </div>
+                            <button type="submit" name="add_account" class="btn btn-dark w-100 fw-bold mt-2"><i class="fa-solid fa-floppy-disk me-1"></i> حفظ في النظام</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="card p-4 shadow-sm h-100">
+                        <h5 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-table-list me-1"></i> شجرة الحسابات النشطة</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>الكود</th>
+                                        <th>اسم الحساب المحاسبي</th>
+                                        <th>نوع الحساب</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($accounts as $account): 
+                                        $badgeColor = "bg-primary";
+                                        if($account['account_type'] == 'مصروفات') $badgeColor = "bg-danger";
+                                        if($account['account_type'] == 'خصوم') $badgeColor = "bg-warning text-dark";
+                                        if($account['account_type'] == 'إيرادات') $badgeColor = "bg-success";
+                                    ?>
+                                        <tr>
+                                            <td class="fw-bold text-secondary"><?php echo htmlspecialchars($account['account_code']); ?></td>
+                                            <td class="fw-semibold"><?php echo htmlspecialchars($account['account_name']); ?></td>
+                                            <td><span class="badge <?php echo $badgeColor; ?> px-3 py-2 fs-7"><?php echo htmlspecialchars($account['account_type']); ?></span></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
